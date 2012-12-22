@@ -1,0 +1,6 @@
+[submodule "lua-mpi"]
+	path = lua-mpi
+	url = git://github.com/jzrake/lua-mpi.git
+[submodule "lua-hdf5"]
+	path = lua-hdf5
+	url = git://github.com/jzrake/lua-hdf5.git
