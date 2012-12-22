@@ -1,1 +1,8 @@
+
 /Makefile.in
+/lua-5.2.1
+/buffer.o
+/lua-hdf5.o
+/lua-mpi.o
+/main
+/main.o
