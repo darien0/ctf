@@ -3,9 +3,7 @@
 # lua-mpi build instructions
 # ------------------------------------------------------------------------------
 #
-# 1. Make sure you have the MPI sources installed.
-#
-# 2. Create a file called Makefile.in which contains macros like these:
+# 1. Create a file called Makefile.in which contains macros like these:
 #
 #    CC = mpicc
 #    LUA_HOME = /path/to/lua-5.2.1
@@ -16,10 +14,10 @@
 #    LVER = lua-5.2.1 # can be lua-5.1 or other
 #
 #
-# 3. Optionally, you may install local Lua sources by typing `make lua`.
+# 2. Optionally, you may install local Lua sources by typing `make lua`.
 #
 #
-# 4. Run `make`.
+# 3. Run `make`.
 #
 # ------------------------------------------------------------------------------
 
@@ -52,6 +50,9 @@ $(LVER) :
 		$(MAKE) install INSTALL_TOP=$(PWD)/$(LVER)
 	$(RM) $(LVER).tar.gz
 
+lua-glut :
+	$(MAKE) -C lua-glut DEFS=$(LUA_I)
+
 lua-mpi.o :
 	$(MAKE) -C lua-mpi $@ MAKEFILE_IN=$(MAKEFILE_IN)
 	cp lua-mpi/$@ $@
@@ -60,12 +61,11 @@ lua-hdf5.o :
 	$(MAKE) -C lua-hdf5 $@ MAKEFILE_IN=$(MAKEFILE_IN)
 	cp lua-hdf5/$@ $@
 
-buffer.o :
-	$(MAKE) -C lua-hdf5 $@ MAKEFILE_IN=$(MAKEFILE_IN)
-	cp lua-hdf5/$@ $@
+buffer.o : buffer.c
+	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I)
 
 main.o : main.c
-	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I)
+	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I) -DINSTALL_DIR=\"$(PWD)\"
 
 main : main.o lua-mpi.o lua-hdf5.o buffer.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LUA_I) $(LUA_L) $(HDF_L)
@@ -73,8 +73,11 @@ main : main.o lua-mpi.o lua-hdf5.o buffer.o
 clean :
 	$(MAKE) -C lua-mpi clean MAKEFILE_IN=$(MAKEFILE_IN)
 	$(MAKE) -C lua-hdf5 clean MAKEFILE_IN=$(MAKEFILE_IN)
+	$(MAKE) -C lua-glut clean
 	$(RM) *.o main
 
 # Also remove local Lua sources
 realclean : clean
 	$(RM) -r $(LVER)
+
+.PHONY : lua-glut

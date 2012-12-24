@@ -5,6 +5,11 @@
 #include "lauxlib.h"
 
 
+#ifndef INSTALL_DIR
+#define INSTALL_DIR "."
+#endif // INSTALL_DIR
+
+
 int luaopen_buffer(lua_State *L);
 int luaopen_hdf5(lua_State *L);
 int luaopen_mpi(lua_State *L);
@@ -28,6 +33,14 @@ int main(int argc, char **argv)
     lua_rawseti(L, -2, n);
   }
   lua_setglobal(L, "arg");
+
+
+  // Set the Lua path
+  // ---------------------------------------------------------------------------
+  lua_getglobal(L, "package");
+  lua_pushfstring(L, "%s/lua-glut/?.bundle", INSTALL_DIR);
+  lua_setfield(L, -2, "cpath");
+  lua_pop(L, 1);
 
 
   // Run the script
