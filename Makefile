@@ -30,8 +30,7 @@ CFLAGS ?= -Wall
 CURL ?= curl
 UNTAR ?= tar -xvf
 CD ?= cd
-CP ?= cp
-RM ?= rm
+RM ?= rm -f
 OS ?= generic
 LVER ?= lua-5.2.1
 
@@ -55,15 +54,15 @@ $(LVER) :
 
 lua-mpi.o :
 	$(MAKE) -C lua-mpi $@ MAKEFILE_IN=$(MAKEFILE_IN)
-	$(CP) lua-mpi/$@ $@
+	cp lua-mpi/$@ $@
 
 lua-hdf5.o :
 	$(MAKE) -C lua-hdf5 $@ MAKEFILE_IN=$(MAKEFILE_IN)
-	$(CP) lua-hdf5/$@ $@
+	cp lua-hdf5/$@ $@
 
 buffer.o :
 	$(MAKE) -C lua-hdf5 $@ MAKEFILE_IN=$(MAKEFILE_IN)
-	$(CP) lua-hdf5/$@ $@
+	cp lua-hdf5/$@ $@
 
 main.o : main.c
 	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I)
