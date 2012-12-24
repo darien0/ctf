@@ -4,3 +4,6 @@
 [submodule "lua-hdf5"]
 	path = lua-hdf5
 	url = git://github.com/jzrake/lua-hdf5.git
+[submodule "lua-glut"]
+	path = lua-glut
+	url = git://github.com/jzrake/lua-glut.git
