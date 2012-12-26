@@ -125,6 +125,13 @@ static int buffer_set_typed(lua_State *L)
   return 0;
 }
 
+static int buffer_light(lua_State *L)
+{
+  char *buf = luaL_checkudata(L, 1, "buffer");
+  lua_pushlightuserdata(L, buf);
+  return 1;
+}
+
 static int buffer__index(lua_State *L)
 {
   const char *buf = luaL_checkudata(L, 1, "buffer");
@@ -171,6 +178,7 @@ int luaopen_buffer(lua_State *L)
   luaL_Reg buffer_types[] = {
     {"new_buffer", buffer_new_buffer},
     {"sizeof", buffer_sizeof},
+    {"light", buffer_light},
     {"get_typed", buffer_get_typed},
     {"set_typed", buffer_set_typed},
     {NULL, NULL}};

@@ -42,6 +42,13 @@ int main(int argc, char **argv)
   lua_setfield(L, -2, "cpath");
   lua_pop(L, 1);
 
+  lua_getglobal(L, "package");
+  lua_pushfstring(L,
+		  "%s/lua-hdf5/?.lua;"
+		  "%s/lua-mpi/?.lua", INSTALL_DIR, INSTALL_DIR);
+  lua_setfield(L, -2, "path");
+  lua_pop(L, 1);
+
 
   // Run the script
   // ---------------------------------------------------------------------------
