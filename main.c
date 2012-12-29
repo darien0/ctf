@@ -44,8 +44,9 @@ int main(int argc, char **argv)
 
   lua_getglobal(L, "package");
   lua_pushfstring(L,
+		  "%s/?.lua;"
 		  "%s/lua-hdf5/?.lua;"
-		  "%s/lua-mpi/?.lua", INSTALL_DIR, INSTALL_DIR);
+		  "%s/lua-mpi/?.lua", INSTALL_DIR, INSTALL_DIR, INSTALL_DIR);
   lua_setfield(L, -2, "path");
   lua_pop(L, 1);
 
