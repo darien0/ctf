@@ -13,9 +13,9 @@ local function isinstance(instance, class)
 end
 local function super(instance, base)
    if not base then
-      return instance.__base__[1]()
+      return instance.__class__.__base__[1]()
    else
-      for i,v in ipairs(instance.__base__) do
+      for i,v in ipairs(instance.__class__.__base__) do
 	 if v == base then
 	    local proxy = v()
 	    rawset(proxy, '__dict__', instance.__dict__)
@@ -28,6 +28,15 @@ end
 local function classname(instance)
    return instance.__class__.__name__
 end
+local function rawresolve(key, ...)
+   local table_list = {...}
+   for i,t in pairs(table_list) do
+      for j,b in ipairs(t) do
+	 local val = b.__dict__[key]
+	 if val then return val end
+      end
+   end
+end
 
 
 function class_meta:__call(...)
@@ -35,7 +44,6 @@ function class_meta:__call(...)
    local base = { }
    for k,v in pairs(self.__base__) do base[k] = v end
    local new = setmetatable({__name__=self.__name__,
-			     __base__=self.__base__,
 			     __dict__=dict,
 			     __class__=self}, instance_meta)
    if new.__init__ then
@@ -44,10 +52,7 @@ function class_meta:__call(...)
    return new
 end
 function class_meta:__index(key)
-   for i,b in ipairs(self.__base__) do
-      local val = b.__dict__[key]
-      if val then return val end
-   end
+   return rawresolve(key, {self}, self.__base__)
 end
 function class_meta:__newindex(key, value)
    self.__dict__[key] = value
@@ -57,9 +62,9 @@ end
 
 function instance_meta:__index(key)
    return
-      self.__class__.__dict__[key] or
-      self.__dict__[key] or
-      class_meta.__index(self, key)
+      self.__class__.__dict__[key] or -- look first in the class dict
+      self.__dict__[key] or -- then in the instance dict
+      rawresolve(key, self.__class__.__base__) -- then in base class dicts
 end
 function instance_meta:__newindex(key, value)
    self.__dict__[key] = value
@@ -148,4 +153,3 @@ assert(isclass(Animal))
 assert(not isclass({}))
 assert(isinstance(blue, Cat))
 assert(not isclass(blue))
-
