@@ -61,10 +61,14 @@ end
 
 
 function instance_meta:__index(key)
-   return
-      self.__class__.__dict__[key] or -- look first in the class dict
-      self.__dict__[key] or -- then in the instance dict
-      rawresolve(key, self.__class__.__base__) -- then in base class dicts
+   local r1, r2 = {self.__class__, self}, self.__class__.__base__
+   local index = rawresolve('__index__', r1, r2)
+   local def = rawresolve(key, r1, r2)
+   if not index then return def
+   elseif type(index) == 'function' then return index(self, key) or def
+   elseif type(index) == 'table' then return index[key] or def
+   else error('__index__ class method must be a function or table')
+   end
 end
 function instance_meta:__newindex(key, value)
    self.__dict__[key] = value
@@ -135,7 +139,7 @@ local blue = Cat(100)
 
 
 blue.tree = 'blue tree'
---assert(blue.food == 'starving')
+assert(blue.food == 'starving')
 assert(blue.tree == 'blue tree')
 assert(blue:jump() == 'can jump')
 assert(type(blue.get_softness) == 'function')
