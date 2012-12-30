@@ -91,7 +91,6 @@ function view:__index(descr)
    for i=1,self._rank do
       start[i] = start[i] + self._start[i]
       strid[i] = strid[i] * self._stride[i]
-
       if start[i] + count[i] > shape[i] then
 	 error('start + count not within extent')
       end

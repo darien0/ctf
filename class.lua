@@ -56,6 +56,19 @@ end
 local function issubclass(instance, base)
    return super(instance, base) and true or false
 end
+local function class(name, ...)
+   local base = {...}
+   if #base == 0 and name ~= 'object' then
+      base[1] = class_module.object
+   end
+   return setmetatable({__name__=name,
+                        __base__=base,
+                        __dict__={ }}, class_meta)
+end
+
+--------------------------------------------------------------------------------
+-- Private utility functions
+--------------------------------------------------------------------------------
 local function rawresolve(key, ...)
    local table_list = {...}
    for i,t in pairs(table_list) do
@@ -67,15 +80,6 @@ local function rawresolve(key, ...)
 end
 local function instresolve(self, key)
    return rawresolve(key, {self.__class__, self}, self.__class__.__base__)
-end
-local function class(name, ...)
-   local base = {...}
-   if #base == 0 and name ~= 'object' then
-      base[1] = class_module.object
-   end
-   return setmetatable({__name__=name,
-                        __base__=base,
-                        __dict__={ }}, class_meta)
 end
 
 --------------------------------------------------------------------------------
