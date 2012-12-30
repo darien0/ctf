@@ -2,7 +2,7 @@
 
 local class_meta = { }
 local instance_meta = { }
-
+local class_module = { }
 
 
 local function isclass(c)
@@ -37,6 +37,9 @@ local function rawresolve(key, ...)
       end
    end
 end
+local function instresolve(self, key)
+   return rawresolve(key, {self.__class__, self}, self.__class__.__base__)
+end
 
 
 function class_meta:__call(...)
@@ -61,42 +64,50 @@ end
 
 
 function instance_meta:__index(key)
-   local r1, r2 = {self.__class__, self}, self.__class__.__base__
-   local index = rawresolve('__index__', r1, r2)
-   local def = rawresolve(key, r1, r2)
-   if not index then return def
-   elseif type(index) == 'function' then return index(self, key) or def
+   local index = instresolve(self, '__index__')
+   local def = instresolve(self, key)
+   if type(index) == 'function' then return index(self, key) or def
    else return index[key] or def
    end
 end
 function instance_meta:__newindex(key, value)
-   local r1, r2 = {self.__class__, self}, self.__class__.__base__
-   if self.__dict__[key] then self.__dict__[key] = value
-   elseif rawresolve('__newindex__', r1, r2) then
-      rawresolve('__newindex__', r1, r2)(self, key, value)
-   else
+   local newindex = instresolve(self, '__newindex__')
+   if self.__dict__[key] then
       self.__dict__[key] = value
+   else
+      newindex(self, key, value)
    end
 end
 function instance_meta:__tostring()
-   local r1, r2 = {self.__class__, self}, self.__class__.__base__
-   local tos = rawresolve('__tostring__', r1, r2)
-   if tos then return tos(self) end
-   return string.format('<Class instance: %s[%s]>', self.__class__.__name__,
-			string.sub(tostring(self.__dict__), 8))
+   return instresolve(self, '__tostring__')(self)
 end
 
 
 
 local function class(name, ...)
+   local base = {...}
+   if #base == 0 and name ~= 'object' then
+      base[1] = class_module.object
+   end
    return setmetatable({__name__=name,
-			__base__={...},
+			__base__=base,
 			__dict__={ }}, class_meta)
 end
 
 
 
+class_module.object = class('object')
 
+function class_module.object:__index__(key)
+   return instresolve(self, key)
+end
+function class_module.object:__newindex__(key)
+   self.__dict__[key] = value
+end
+function class_module.object:__tostring__()
+   return string.format('<Class instance: %s[%s]>', self.__class__.__name__,
+			string.sub(tostring(self.__dict__), 8))
+end
 
 
 local SoftObject = class('SoftObject')
@@ -154,6 +165,7 @@ assert(blue:eat() == 'unknown food')
 assert(super(blue).speak(blue) == 'unknown noise')
 assert(super(blue, Animal):jump() == 'cannot jump')
 assert(tostring(blue) == '<:crazy cat:>')
+
 
 -- proxy class returned by super retains __dict__
 assert(super(blue, Animal).tree == 'blue tree')
