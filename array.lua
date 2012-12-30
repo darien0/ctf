@@ -135,6 +135,12 @@ function array.view(buf, dtype, extent, start, count, stride)
    function new:selection() -- useful for HDF5 compatibility
       return self._start, self._stride, self._count, self._block
    end
+   function new:contiguous()
+      for i=1,self._rank do
+	 if self._extent[i] ~= self._count[i] then return false end
+      end
+      return true
+   end
    function new:copy()
       local buf = buffer.extract(self._buf, self._rank,
 				 array.sizeof(self._dtype),
@@ -145,7 +151,7 @@ function array.view(buf, dtype, extent, start, count, stride)
       return array.view(buf, self._dtype, self._count)
    end
    function new:vector()
-      local arr = self:copy() -- don't bother copying if view is contigous
+      local arr = self:contigous() and self or self:copy()
       return array.vector(arr._buf, arr._dtype)
    end
    setmetatable(new, view)
@@ -201,6 +207,9 @@ local function test3()
    assert(shp2[1] == 10)
    assert(shp2[2] == 5)
    assert(shp2[3] == 2)
+   assert(view0:contiguous())
+   assert(not view1:contiguous())
+   assert(not view2:contiguous())
 end
 
 
