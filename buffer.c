@@ -176,7 +176,7 @@ static int buffer_extract(lua_State *L)
   int *J = (int*) malloc(rank * sizeof(int)); // current indices into buffer
   int *N = (int*) malloc(rank * sizeof(int)); // number of elements to select
   int *S = (int*) malloc(rank * sizeof(int)); // skips along each axis
-  char *dst = (char*) buf_push_buffer(L, NULL, ntot); // destination
+  char *dst = (char*) buf_push_buffer(L, NULL, ntot * byte); // destination
 
   for (d=0; d<rank; ++d) {
     J[d] = 0;
@@ -200,6 +200,7 @@ static int buffer_extract(lua_State *L)
       }
     }
   }
+
   free(J);
   free(N);
   free(S);

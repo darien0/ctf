@@ -32,15 +32,12 @@ function vector:__tostring(i,x)
 	 tab[i] = self[i-1]
       end
    else
-      tab[1] = self[0]
-      tab[2] = self[1]
-      tab[3] = self[2]
-      tab[4] = self[3]
-      tab[5] = '...'
-      tab[6] = self[-4]
-      tab[7] = self[-3]
-      tab[8] = self[-2]
-      tab[9] = self[-1]
+      local N=self._printn
+      for i=1,N-1 do
+	 tab[i] = self[i-1]
+	 tab[2*N-i] = self[-i]
+      end
+      tab[N] = '...'
    end
    return '['..table.concat(tab, ', ')..']'
 end
@@ -51,10 +48,15 @@ function array.vector(arg, dtype)
    local len = type(arg) == 'table' and #arg or arg
    local new = {_dtype=dtype,
 		_len=len,
-		_buf=buffer.new_buffer(len * array.sizeof(dtype))}
+		_buf=buffer.new_buffer(len * array.sizeof(dtype)),
+		_printn=5}
    function new:buffer() return self._buf end
    function new:pointer() return buffer.light(self._buf) end
    function new:dtype() return self._dtype end
+   function new:view(extent, start, count, stride)
+      return array.view(self._buf, self._dtype, extent, start, count, stride)
+   end
+   function new:set_printn(n) self._printn = n end
    setmetatable(new, vector)
    for i=1,len do
       new[i-1] = val[i] or 0
@@ -62,30 +64,22 @@ function array.vector(arg, dtype)
    return new
 end
 
-
-local function slice_view(view, descr)
-   -- descr = {{start, stop, stride}, {...}}
-
+function view:__index(descr)
    local start = { }
    local count = { }
    local strid = { }
-   local shape = view:shape()
-
-   for i=1,view._rank do
+   local shape = self:shape()
+   for i=1,self._rank do
       descr[i] = descr[i] or { }
       descr[i][2] = descr[i][2] or shape[i]
       while descr[i][2] < 0 do
 	 descr[i][2] = descr[i][2] + shape[i]
       end
       start[i] = descr[i][1] or 0
-      count[i] = descr[i][2] - start[i]
       strid[i] = descr[i][3] or 1
+      count[i] =(descr[i][2] - start[i]) / strid[i]
    end
-   return array.view(view._buf, view._dtype, view._extent, start, count, strid)
-end
-
-function view:__index(descr)
-   return slice_view(self, descr)
+   return array.view(self._buf, self._dtype, self._extent, start, count, strid)
 end
 function view:__len()
    return self._vsize
@@ -123,6 +117,23 @@ function array.view(buf, dtype, extent, start, count, stride)
    function new:extent() return self._extent end -- global buffer extent
    function new:selection() -- useful for HDF5 compatibility
       return self._start, self._stride, self._count, self._block
+   end
+   function new:copy()
+      local buf = buffer.extract(self._buf, self._rank,
+				 array.sizeof(self._dtype),
+				 array.vector(self._extent, 'int'):buffer(),
+				 array.vector(self._start, 'int'):buffer(),
+				 array.vector(self._stride, 'int'):buffer(),
+				 array.vector(self._count, 'int'):buffer())
+      return array.view(buf, self._dtype, self._count)
+   end
+   function new:vector()
+      local arr = self:copy()
+      local vec = array.vector(#arr, arr._dtype)
+      for i=0,#vec-1 do
+	 vec[i] = buffer.get_typed(arr._buf, buffer[self._dtype], i)
+      end
+      return vec
    end
    setmetatable(new, view)
 
@@ -162,11 +173,15 @@ local function test2()
    assert(vec:dtype() == 'int')
 end
 local function test3()
-   local buf = buffer.new_buffer(1000 * array.sizeof('double'))
-   local view = array.view(buf, 'double', {10,10,10})
-   local newview = view[{{0,10},{0,10},{0,5}}]
-   assert(view:dtype() == 'double')
-   assert(#newview == 500)
+   local vec = array.vector(1000)
+   for i=0,#vec-1 do vec[i] = i end
+   local view = vec:view{10,10,10}
+   local newview = view[{{0,10,1},{0,10,2},{0,10,1}}]
+   local newvec = newview:vector()
+   newvec:set_printn(20)
+   print(newvec)
+   print(#newvec)
+   print(buffer.metatable)
 end
 
 
