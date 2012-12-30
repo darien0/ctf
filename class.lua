@@ -66,15 +66,22 @@ function instance_meta:__index(key)
    local def = rawresolve(key, r1, r2)
    if not index then return def
    elseif type(index) == 'function' then return index(self, key) or def
-   elseif type(index) == 'table' then return index[key] or def
-   else error('__index__ class method must be a function or table')
+   else return index[key] or def
    end
 end
 function instance_meta:__newindex(key, value)
-   self.__dict__[key] = value
+   local r1, r2 = {self.__class__, self}, self.__class__.__base__
+   if self.__dict__[key] then self.__dict__[key] = value
+   elseif rawresolve('__newindex__', r1, r2) then
+      rawresolve('__newindex__', r1, r2)(self, key, value)
+   else
+      self.__dict__[key] = value
+   end
 end
 function instance_meta:__tostring()
-   if self.__tostring__ then return self:__tostring__() end
+   local r1, r2 = {self.__class__, self}, self.__class__.__base__
+   local tos = rawresolve('__tostring__', r1, r2)
+   if tos then return tos(self) end
    return string.format('<Class instance: %s[%s]>', self.__class__.__name__,
 			string.sub(tostring(self.__dict__), 8))
 end
@@ -111,20 +118,20 @@ function Animal:jump()
    return 'cannot jump'
 end
 
-Cat = class('Cat', Animal, SoftObject)
+local Cat = class('Cat', Animal, SoftObject)
 function Cat:__init__(softness)
    self._softness = softness
 end
 function Cat:__tostring__()
-   return self:speak()
+   return '<:crazy cat:>'
 end
 function Cat:__index__(key)
    if key == 'food' then
       return 'starving'
    end
 end
-function Cat:__newindex__(key, value)
-   -- if false or nil is returned then default __newindex is carried out
+function Cat:__newindex__(key, value) -- boring over-ride
+   self.__dict__[key] = value
 end
 function Cat:speak()
    return 'meow'
@@ -134,8 +141,6 @@ function Cat:jump()
 end
 local blue = Cat(100)
 
-
---print(blue:__index__('food'))
 
 
 blue.tree = 'blue tree'
@@ -148,7 +153,7 @@ assert(blue:speak() == 'meow')
 assert(blue:eat() == 'unknown food')
 assert(super(blue).speak(blue) == 'unknown noise')
 assert(super(blue, Animal):jump() == 'cannot jump')
-assert(tostring(blue) == 'meow')
+assert(tostring(blue) == '<:crazy cat:>')
 
 -- proxy class returned by super retains __dict__
 assert(super(blue, Animal).tree == 'blue tree')
