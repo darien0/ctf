@@ -88,6 +88,14 @@ function view:__index(descr)
       strid[i] = descr[i][3] or 1
       count[i] =(descr[i][2] - start[i]) / strid[i]
    end
+   for i=1,self._rank do
+      start[i] = start[i] + self._start[i]
+      strid[i] = strid[i] * self._stride[i]
+
+      if start[i] + count[i] > shape[i] then
+	 error('start + count not within extent')
+      end
+   end
    return array.view(self._buf, self._dtype, self._extent, start, count, strid)
 end
 function view:__len()
@@ -180,12 +188,19 @@ end
 local function test3()
    local vec = array.vector(1000)
    for i=0,#vec-1 do vec[i] = i end
-   local view = vec:view{10,10,10}
-   local newview = view[{{0,10,1},{0,10,2},{0,10,1}}]
-   local newvec = newview:vector()
-   newvec:set_printn(20)
-   print(newvec)
-   print(#newvec)
+   local view0 = vec:view{10,10,10}
+   local view1 = view0[{{0,10},{0,10},{0,10,2}}]
+   local view2 = view1[{{0,10},{0,5},{0,4,2}}]
+   local shp1 = view1:shape()
+   local shp2 = view2:shape()
+   assert(#view1 == 500)
+   assert(#view2 == 100)
+   assert(shp1[1] == 10)
+   assert(shp1[2] == 10)
+   assert(shp1[3] == 5)
+   assert(shp2[1] == 10)
+   assert(shp2[2] == 5)
+   assert(shp2[3] == 2)
 end
 
 
