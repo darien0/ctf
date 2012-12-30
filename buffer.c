@@ -133,6 +133,12 @@ static int buffer_light(lua_State *L)
   return 1;
 }
 
+static int buffer_isbuffer(lua_State *L)
+{
+  lua_pushboolean(L, luaL_testudata(L, 1, "buffer") != NULL);
+  return 1;
+}
+
 static int buffer_extract(lua_State *L)
 /* -----------------------------------------------------------------------------
  * Extracts a slice from B1, and returns it as the contiguous array 'B0'
@@ -258,6 +264,7 @@ int luaopen_buffer(lua_State *L)
     {"get_typed", buffer_get_typed},
     {"set_typed", buffer_set_typed},
     {"extract", buffer_extract},
+    {"isbuffer", buffer_isbuffer},
     {NULL, NULL}};
 
   luaL_Reg buffer_meta[] = {

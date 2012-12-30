@@ -44,12 +44,18 @@ end
 
 function array.vector(arg, dtype)
    local dtype = dtype or 'double'
-   local val = type(arg) == 'table' and arg or { }
-   local len = type(arg) == 'table' and #arg or arg
-   local new = {_dtype=dtype,
-		_len=len,
-		_buf=buffer.new_buffer(len * array.sizeof(dtype)),
-		_printn=5}
+   local new = {_dtype=dtype, _printn=5}
+   local val = false
+
+   if buffer.isbuffer(arg) then
+      new._len = #arg / array.sizeof(dtype)
+      new._buf = arg
+   else
+      new._len = type(arg) == 'table' and #arg or arg
+      new._buf = buffer.new_buffer(new._len * array.sizeof(dtype))
+      val = type(arg) == 'table' and arg or { }
+   end
+
    function new:buffer() return self._buf end
    function new:pointer() return buffer.light(self._buf) end
    function new:dtype() return self._dtype end
@@ -58,8 +64,11 @@ function array.vector(arg, dtype)
    end
    function new:set_printn(n) self._printn = n end
    setmetatable(new, vector)
-   for i=1,len do
-      new[i-1] = val[i] or 0
+
+   if val then
+      for i=1,#new do
+	 new[i-1] = val[i] or 0
+      end
    end
    return new
 end
@@ -121,19 +130,15 @@ function array.view(buf, dtype, extent, start, count, stride)
    function new:copy()
       local buf = buffer.extract(self._buf, self._rank,
 				 array.sizeof(self._dtype),
-				 array.vector(self._extent, 'int'):buffer(),
-				 array.vector(self._start, 'int'):buffer(),
-				 array.vector(self._stride, 'int'):buffer(),
-				 array.vector(self._count, 'int'):buffer())
+				 array.vector(self._extent, 'int')._buf,
+				 array.vector(self._start, 'int')._buf,
+				 array.vector(self._stride, 'int')._buf,
+				 array.vector(self._count, 'int')._buf)
       return array.view(buf, self._dtype, self._count)
    end
    function new:vector()
-      local arr = self:copy()
-      local vec = array.vector(#arr, arr._dtype)
-      for i=0,#vec-1 do
-	 vec[i] = buffer.get_typed(arr._buf, buffer[self._dtype], i)
-      end
-      return vec
+      local arr = self:copy() -- don't bother copying if view is contigous
+      return array.vector(arr._buf, arr._dtype)
    end
    setmetatable(new, view)
 
@@ -181,7 +186,6 @@ local function test3()
    newvec:set_printn(20)
    print(newvec)
    print(#newvec)
-   print(buffer.metatable)
 end
 
 
