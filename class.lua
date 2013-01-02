@@ -11,6 +11,8 @@
 -- + class
 -- + isclass
 -- + isinstance
+-- + getattrib
+-- + setattrib
 -- + classname
 -- + super
 -- 
@@ -28,6 +30,24 @@ local instance_meta = { }
 local class_module = { }
 
 --------------------------------------------------------------------------------
+-- Private utility functions
+--------------------------------------------------------------------------------
+local function resolve(obj, key)
+   -- 
+   -- Attempt to resolve attribute `key` of `obj` which may be a class or
+   -- instance. Recurse through __base__ table depth-first, and return nil if
+   -- attribute is not found. Do not invoke the __index__ meta-method in doing
+   -- so.
+   -- 
+   local val = obj.__dict__[key] or obj.__class__.__dict__[key]
+   if val then return val end
+   for i,b in ipairs(obj.__base__) do
+      local val = resolve(b, key)
+      if val then return val end
+   end
+end
+
+--------------------------------------------------------------------------------
 -- Module functions
 --------------------------------------------------------------------------------
 local function isclass(c)
@@ -41,9 +61,9 @@ local function classname(A)
 end
 local function super(instance, base)
    if not base then
-      return instance.__class__.__base__[1]()
+      return instance.__base__[1]()
    else
-      for i,v in ipairs(instance.__class__.__base__) do
+      for i,v in ipairs(instance.__base__) do
          if v == base then
             local proxy = v()
             rawset(proxy, '__dict__', instance.__dict__)
@@ -56,6 +76,12 @@ end
 local function issubclass(instance, base)
    return super(instance, base) and true or false
 end
+local function setattrib(instance, key, value)
+   instance.__dict__[key] = value
+end
+local function getattrib(instance, key)
+   return resolve(instance, key)
+end
 local function class(name, ...)
    local base = {...}
    if #base == 0 and name ~= 'object' then
@@ -63,23 +89,8 @@ local function class(name, ...)
    end
    return setmetatable({__name__=name,
                         __base__=base,
-                        __dict__={ }}, class_meta)
-end
-
---------------------------------------------------------------------------------
--- Private utility functions
---------------------------------------------------------------------------------
-local function rawresolve(key, ...)
-   local table_list = {...}
-   for i,t in pairs(table_list) do
-      for j,b in ipairs(t) do
-         local val = b.__dict__[key]
-         if val then return val end
-      end
-   end
-end
-local function instresolve(self, key)
-   return rawresolve(key, {self.__class__, self}, self.__class__.__base__)
+                        __dict__={ },
+			__class__={__dict__={ }}}, class_meta)
 end
 
 --------------------------------------------------------------------------------
@@ -91,14 +102,15 @@ function class_meta:__call(...)
    for k,v in pairs(self.__base__) do base[k] = v end
    local new = setmetatable({__name__=self.__name__,
                              __dict__=dict,
-                             __class__=self}, instance_meta)
-   if new.__init__ then
-      new:__init__(...)
+                             __class__=self,
+			     __base__=self.__base__}, instance_meta)
+   if getattrib(new, '__init__') then
+      getattrib(new, '__init__')(new, ...)
    end
    return new
 end
 function class_meta:__index(key)
-   return rawresolve(key, {self}, self.__base__)
+   return resolve(key, {self}, self.__base__)
 end
 function class_meta:__newindex(key, value)
    self.__dict__[key] = value
@@ -112,22 +124,27 @@ end
 -- Instance metatable
 --------------------------------------------------------------------------------
 function instance_meta:__index(key)
-   local index = instresolve(self, '__index__')
-   local def = instresolve(self, key)
-   if type(index) == 'function' then return index(self, key) or def
-   else return index[key] or def
+   local index = resolve(self, '__index__')
+   local def = resolve(self, key)
+   if type(index) == 'function' then return def or index(self, key)
+   else return def or index[key]
    end
 end
 function instance_meta:__newindex(key, value)
-   local newindex = instresolve(self, '__newindex__')
    if self.__dict__[key] then
       self.__dict__[key] = value
    else
-      newindex(self, key, value)
+      resolve(self, '__newindex__')(self, key, value)
    end
 end
 function instance_meta:__tostring()
-   return instresolve(self, '__tostring__')(self)
+   return resolve(self, '__tostring__')(self)
+end
+function instance_meta:__pairs()
+   return resolve(self, '__pairs__')(self)
+end
+function instance_meta:__gc()
+   return resolve(self, '__gc__')(self)
 end
 
 --------------------------------------------------------------------------------
@@ -135,7 +152,7 @@ end
 --------------------------------------------------------------------------------
 local object = class('object')
 function object:__index__(key)
-   return instresolve(self, key)
+   return resolve(self, key)
 end
 function object:__newindex__(key)
    self.__dict__[key] = value
@@ -143,6 +160,13 @@ end
 function object:__tostring__()
    return string.format('<Class instance: %s[%s]>', classname(self),
                         string.sub(tostring(self.__dict__), 8))
+end
+function object:__pairs__()
+   error('object does not support iteration')
+end
+function object:__gc__()
+   -- warning! __gc__ is only triggered for the first resolved __gc__ method in
+   -- the hierarchy.
 end
 
 --------------------------------------------------------------------------------
@@ -152,6 +176,8 @@ class_module.object = object
 class_module.class = class
 class_module.isclass = isclass
 class_module.isinstance = isinstance
+class_module.getattrib = getattrib
+class_module.setattrib = setattrib
 class_module.classname = classname
 class_module.super = super
 
