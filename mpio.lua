@@ -26,14 +26,17 @@ local file = hdf5.File('outfile.h5', 'w', mpi)
 local grp = hdf5.Group(file, 'thegroup')
 local dset = hdf5.DataSet(grp, 'thedata', 'w',
 			  {shape={nper * size}, chunk={nper}, dtype='double'})
-dset:set_mpio('independent')
+dset:set_mpio('COLLECTIVE')
 
 for i=0,#data-1 do data[i] = rank * nper + i end
 dset[{{rank * nper, (rank + 1) * nper}}] = data:view{nper}
+for k,v in pairs(dset:get_mpio()) do
+   print(string.format("%30s: %-30s", k,v))
+end
 file:close()
 
 local file = hdf5.File('outfile.h5', 'r', mpi)
-print(unpack(file["thegroup"]["thedata"]:get_chunk()))
+--print(unpack(file["thegroup"]["thedata"]:get_chunk()))
 file:close()
 
 MPI.Finalize()
