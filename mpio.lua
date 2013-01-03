@@ -30,8 +30,10 @@ dset:set_mpio('COLLECTIVE')
 
 for i=0,#data-1 do data[i] = rank * nper + i end
 dset[{{rank * nper, (rank + 1) * nper}}] = data:view{nper}
-for k,v in pairs(dset:get_mpio()) do
-   print(string.format("%30s: %-30s", k,v))
+if rank == 0 then
+   for k,v in pairs(dset:get_mpio()) do
+      print(string.format("%30s: %-30s", k,v))
+   end
 end
 file:close()
 
