@@ -2,7 +2,8 @@
 -- http://www.hdfgroup.org/HDF5/doc/RM/CollectiveCalls.html
 
 local MPI = require 'MPI'
-local hdf5 = require 'LuaHdf5'
+local H5 = require 'HDF5'
+local hdf5 = require 'LuaHDF5'
 local array = require 'array'
 
 
@@ -31,6 +32,8 @@ dset:set_mpio('COLLECTIVE')
 for i=0,#data-1 do data[i] = rank * nper + i end
 dset[{{rank * nper, (rank + 1) * nper}}] = data:view{nper}
 if rank == 0 then
+   print(H5.H5_VERS_INFO())
+   print('version > 1.8.3 ?', H5.H5_VERSION_GE(1,8,3))
    for k,v in pairs(dset:get_mpio()) do
       print(string.format("%30s: %-30s", k,v))
    end
