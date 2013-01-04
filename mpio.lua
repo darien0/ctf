@@ -25,15 +25,14 @@ local mpi = {comm = MPI.COMM_WORLD,
 local align = {threshold = 4 * KB,
 	       alignment = stripe_size}
 local btree_ik = 32 -- default
-
+local fpl = {mpi=mpi, align=align, btree_ik=btree_ik}
 
 local size = csize[0]
 local rank = crank[0]
 
 local data = array.vector(nper, 'double')
 
-local file = hdf5.File('data/outfile.h5', 'w',
-		       {mpi=mpi, align=align, btree_ik=btree_ik})
+local file = hdf5.File('data/outfile.h5', 'w', fpl)
 local grp = hdf5.Group(file, 'thegroup')
 local dset = hdf5.DataSet(grp, 'thedata', 'w',
 			  {shape={nper * size}, chunk={nper}, dtype='double'})
@@ -50,8 +49,17 @@ if rank == 0 then
 end
 file:close()
 
-local file = hdf5.File('data/outfile.h5', 'r', mpi)
---print(unpack(file["thegroup"]["thedata"]:get_chunk()))
-file:close()
+local file = hdf5.File('data/outfile.h5', 'r', fpl)
+local dset = file["thegroup"]["thedata"]
+local fspace = dset:get_space()
+local mspace = hdf5.DataSpace{nper}
+local data2 = data:copy()
 
+fspace:select_hyperslab({rank * nper}, {1}, {nper}, {1})
+dset:set_mpio('COLLECTIVE')
+dset:read(data2:buffer(), mspace, fspace)
+for i=0,#data-1 do
+   assert(data[i] == data2[i])
+end
+file:close()
 MPI.Finalize()

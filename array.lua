@@ -60,7 +60,11 @@ function array.vector(arg, dtype)
    function new:pointer() return buffer.light(self._buf) end
    function new:dtype() return self._dtype end
    function new:view(extent, start, count, stride)
-      return array.view(self._buf, self._dtype, extent, start, count, stride)
+      return array.view(self._buf, self._dtype, extent or {#self},
+			start, count, stride)
+   end
+   function new:copy(extent, start, count, stride)
+      return self:view():copy():vector()
    end
    function new:set_printn(n) self._printn = n end
    setmetatable(new, vector)
@@ -150,7 +154,7 @@ function array.view(buf, dtype, extent, start, count, stride)
       return array.view(buf, self._dtype, self._count)
    end
    function new:vector()
-      local arr = self:contigous() and self or self:copy()
+      local arr = self:contiguous() and self or self:copy()
       return array.vector(arr._buf, arr._dtype)
    end
    setmetatable(new, view)
