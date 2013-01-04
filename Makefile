@@ -52,9 +52,6 @@ $(LVER) :
 		$(MAKE) install INSTALL_TOP=$(PWD)/$(LVER)
 	$(RM) $(LVER).tar.gz
 
-#cow/libcow.a : .FORCE
-#	$(MAKE) -C cow MAKEFILE_IN=$(MAKEFILE_IN)
-
 lua-mpi/lua-mpi.o : .FORCE
 	$(MAKE) -C lua-mpi lua-mpi.o MAKEFILE_IN=$(MAKEFILE_IN)
 
@@ -74,7 +71,6 @@ main : main.o lua-mpi/lua-mpi.o lua-hdf5/lua-hdf5.o buffer.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LUA_I) $(LUA_L) $(HDF_L)
 
 clean :
-	#$(MAKE) -C cow clean MAKEFILE_IN=$(MAKEFILE_IN)
 	$(MAKE) -C lua-mpi clean MAKEFILE_IN=$(MAKEFILE_IN)
 	$(MAKE) -C lua-hdf5 clean MAKEFILE_IN=$(MAKEFILE_IN)
 	$(MAKE) -C lua-glut clean
