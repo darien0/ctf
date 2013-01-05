@@ -154,7 +154,7 @@ local object = class('object')
 function object:__index__(key)
    return resolve(self, key)
 end
-function object:__newindex__(key)
+function object:__newindex__(key, value)
    self.__dict__[key] = value
 end
 function object:__tostring__()
