@@ -9,7 +9,7 @@ local cow    = require 'cow'
 --------------------------------------------------------------------------------
 -- Module-level variables defining the test
 --------------------------------------------------------------------------------
-local N = 16
+local N = 8 -- third runtime arg
 local Nx = N*1
 local Ny = N*2
 local Nz = N*4
@@ -68,6 +68,11 @@ end
 
 local TestCase = oo.class('TestCase')
 function TestCase:__init__(opts)
+
+   Nx = N*1
+   Ny = N*2
+   Nz = N*4
+
    local domain = cow.domain_new()
    cow.domain_setndim(domain, 3)
    cow.domain_setsize(domain, 0, Nx)
@@ -184,8 +189,10 @@ function TestCase:write()
       dset:close()
    end
    file:close()
-   print("[ ] write time: " .. os.clock() - start .. ' seconds')
+   local dt = os.clock() - start
+   print("[ ] write time: " .. dt .. ' seconds')
    print("[O] finished test: write\n")
+   return dt
 end
 
 function TestCase:read()
@@ -228,8 +235,10 @@ function TestCase:read()
       dset:close()
    end
    file:close()
-   print("[ ] read time: " .. os.clock() - start .. ' seconds')
-   print("[O] finished test: read\n")
+   local dt = os.clock() - start
+   print("[ ] read time: " .. dt .. ' seconds')
+   print("[O] finished test: write\n")
+   return dt
 end
 
 
@@ -238,16 +247,23 @@ local function main()
       print("please provide the name of the file to use as a test")
       return
    end
+   if arg[3] then
+      N = tonumber(arg[3])
+      print("[ ] setting N = " .. N)
+   end
    MPI.Init()
    cow.init(0, nil, 0) -- to reopen stdout to dev/null
 
+   local run_table = { }
    local function runtest(opts)
+      table.insert(run_table, opts)
       print(sep1)
       print(sep1)
       print(sep1)
       local test = TestCase(opts)
-      test:write()
-      test:read()
+
+      opts.write_time = test:write()
+      opts.read_time = test:read()
       test:close()
    end
 
@@ -261,7 +277,7 @@ local function main()
 	 end
       end
    end
-
+   pretty_print(run_table)
    MPI.Finalize()
 end
 
