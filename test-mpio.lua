@@ -40,17 +40,6 @@ local function comm_rank_size(comm)
    return r, s
 end
 
-local function pretty_print0(tab, message)
-   if message then
-      print("[ ] " .. message .. ':')
-   end
-   for k,v in pairs(tab or { }) do
-      local val = type(val) == 'table' and
-	 '[' .. table.concat(val, ', ') .. ']' or v
-      print(string.format("%30s: %-30s", k, val))
-   end
-end
-
 function pretty_print(t, indent)
    local names = { }
    if not indent then indent = "" end
