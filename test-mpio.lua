@@ -19,6 +19,8 @@ local KB = 1024
 local MB = 1024 * 1024
 local stripe_size = 4 * MB
 local dataset_names = {"dset1", "dset2", "dset3", "dset4", "dset5"}
+local sep1 = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+local sep2 = "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
 
 function array.array(extent, dtype)
    local dtype = dtype or 'double'
@@ -38,6 +40,42 @@ local function comm_rank_size(comm)
    return r, s
 end
 
+local function pretty_print0(tab, message)
+   if message then
+      print("[ ] " .. message .. ':')
+   end
+   for k,v in pairs(tab or { }) do
+      local val = type(val) == 'table' and
+	 '[' .. table.concat(val, ', ') .. ']' or v
+      print(string.format("%30s: %-30s", k, val))
+   end
+end
+
+function pretty_print(t, indent)
+   local names = { }
+   if not indent then indent = "" end
+   for n,g in pairs(t) do
+      table.insert(names,n)
+   end
+   table.sort(names)
+   for i,n in pairs(names) do
+      local v = t[n]
+      if type(v) == "table" then
+	 if(v==t) then
+	    print(indent..tostring(n)..": <-")
+	 else
+	    print(indent..tostring(n)..":")
+	    pretty_print(v,indent.."   ")
+	 end
+      else
+	 if type(v) == "function" then
+	    print(indent..tostring(n).."()")
+	 else
+	    print(indent..tostring(n)..": "..tostring(v))
+	 end
+      end
+   end
+end
 
 local TestCase = oo.class('TestCase')
 function TestCase:__init__(opts)
@@ -90,13 +128,19 @@ function TestCase:__init__(opts)
    self.file_opts = { }
    self.file_opts.mpi = {comm = MPI.COMM_WORLD,
 			 info = MPI.INFO_NULL}
-   self.file_opts.align = {threshold = 4 * KB,
-			   alignment = stripe_size}
-   self.file_opts.btree_ik = 32 -- default
+   self.file_opts.align = {threshold = opts.align and 4 * KB or 1,
+			   alignment = opts.align and stripe_size or 1}
+   self.file_opts.btree_ik = opts.btree_ik or 32 -- default
 
    self.dset_opts = { }
-   self.dset_opts.chunk = true
-   self.dset_opts.mpio = 'COLLECTIVE'
+   self.dset_opts.chunk = opts.chunk or false
+   self.dset_opts.mpio = opts.mpio or 'COLLECTIVE'
+
+   print(sep1)
+   print("[ ] test setup:")
+   pretty_print(self.file_opts)
+   pretty_print(self.dset_opts)
+   print(sep2)
 end
 
 function TestCase:close()
@@ -105,9 +149,11 @@ function TestCase:close()
 end
 
 function TestCase:write()
+   local start = os.clock()
    local file = hdf5.File(self.filename, 'w', self.file_opts)
    local group = hdf5.Group(file, "thegroup")
    local dset_opts = {shape={Nx, Ny, Nz}, dtype='double'}
+
    if self.dset_opts.chunk then
       dset_opts.chunk = self.sgrid_shape
    end
@@ -137,10 +183,66 @@ function TestCase:write()
       mspace:select_hyperslab(mstart, mstrid, mcount, mblock)
       fspace:select_hyperslab(fstart, fstrid, fcount, fblock)
 
+      dset:set_mpio(self.dset_opts.mpio)
       dset:write(self.array:buffer(), mspace, fspace)
+
+      if i == #dataset_names  then
+	 print(sep1)
+	 print("[ ] write stats:")
+	 pretty_print(dset:get_mpio())
+	 print(sep2)
+      end
+      dset:close()
    end
    file:close()
+   print("[ ] write time: " .. os.clock() - start .. ' seconds')
+   print("[O] finished test: write\n")
 end
+
+function TestCase:read()
+   local start = os.clock()
+   local file = hdf5.File(self.filename, 'r', self.file_opts)
+   local group = hdf5.Group(file, "thegroup")
+
+   local S = self.sgrid_shape
+   local T = self.sgrid_start
+   local Ni, Nj, Nk = S[1], S[2], S[3]
+   local i0, j0, k0 = T[1], T[2], T[3]
+
+   for i,name in ipairs(dataset_names) do
+      print("[ ] reading " .. name .. ' ...')
+      local dset = hdf5.DataSet(group, name, 'r+')
+
+      local mspace = hdf5.DataSpace(self.array_shape)
+      local fspace = dset:get_space()
+
+      local mstart = {Ng, Ng, Ng, i-1}
+      local mstrid = {1, 1, 1, #dataset_names}
+      local mcount = {Ni, Nj, Nk, 1}
+      local mblock = {1, 1, 1, 1}
+   
+      local fstart = {i0, j0, k0}
+      local fstrid = {1, 1, 1}
+      local fcount = {Ni, Nj, Nk}
+      local fblock = {1, 1, 1}
+
+      mspace:select_hyperslab(mstart, mstrid, mcount, mblock)
+      fspace:select_hyperslab(fstart, fstrid, fcount, fblock)
+
+      dset:set_mpio(self.dset_opts.mpio)
+      dset:read(self.array:buffer(), mspace, fspace)
+
+      if i == #dataset_names then
+	 print("[ ] read stats:")
+	 pretty_print(dset:get_mpio())
+      end
+      dset:close()
+   end
+   file:close()
+   print("[ ] read time: " .. os.clock() - start .. ' seconds')
+   print("[O] finished test: read\n")
+end
+
 
 local function main()
    if not arg[2] then
@@ -148,10 +250,28 @@ local function main()
       return
    end
    MPI.Init()
+   cow.init(0, nil, 0) -- to reopen stdout to dev/null
 
-   local test = TestCase{filename=arg[2]}
-   test:write()
-   test:close()
+   local function runtest(opts)
+      print(sep1)
+      print(sep1)
+      print(sep1)
+      local test = TestCase(opts)
+      test:write()
+      test:read()
+      test:close()
+   end
+
+   for _,mpio in pairs{'INDEPENDENT', 'COLLECTIVE'} do
+      for _,align in pairs{true, false} do
+	 for _,chunk in pairs{true, false} do
+	    runtest{filename=arg[2],
+		    mpio=mpio,
+		    align=align,
+		    chunk=chunk}
+	 end
+      end
+   end
 
    MPI.Finalize()
 end
