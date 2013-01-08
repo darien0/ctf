@@ -19,8 +19,8 @@ local KB = 1024
 local MB = 1024 * 1024
 local stripe_size = 4 * MB
 local dataset_names = {"dset1", "dset2", "dset3", "dset4", "dset5"}
-local sep1 = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
-local sep2 = "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+local sep1 = "#################################################################"
+local sep2 = "-----------------------------------------------------------------"
 
 function array.array(extent, dtype)
    local dtype = dtype or 'double'
@@ -116,11 +116,14 @@ function TestCase:__init__(opts)
    end
    print("[ ] setting up grid: [" .. table.concat({Nx, Ny, Nz}, ', ') .. ']')
 
+   local domain_comm = MPI.Comm()
+   cow.domain_getcomm(domain, domain_comm)
+
    -----------------------------------------------------------------------------
    -- Configuration options: try many to fine-tune performance
    -----------------------------------------------------------------------------
    self.file_opts = { }
-   self.file_opts.mpi = {comm = MPI.COMM_WORLD,
+   self.file_opts.mpi = {comm = domain_comm,
 			 info = MPI.INFO_NULL}
    self.file_opts.align = {threshold = opts.align and 4 * KB or 1,
 			   alignment = opts.align and stripe_size or 1}
@@ -189,6 +192,7 @@ function TestCase:write()
       dset:close()
    end
    file:close()
+   MPI.Barrier(self.file_opts.mpi.comm)
    local dt = os.clock() - start
    print("[ ] write time: " .. dt .. ' seconds')
    print("[O] finished test: write\n")
@@ -235,6 +239,7 @@ function TestCase:read()
       dset:close()
    end
    file:close()
+   MPI.Barrier(self.file_opts.mpi.comm)
    local dt = os.clock() - start
    print("[ ] read time: " .. dt .. ' seconds')
    print("[O] finished test: write\n")
@@ -244,12 +249,11 @@ end
 
 local function main()
    if not arg[2] then
-      print("please provide the name of the file to use as a test")
+      print("please provide the name of a directory to output to")
       return
    end
    if arg[3] then
       N = tonumber(arg[3])
-      print("[ ] setting N = " .. N)
    end
    MPI.Init()
    cow.init(0, nil, 0) -- to reopen stdout to dev/null
@@ -266,11 +270,12 @@ local function main()
       opts.read_time = test:read()
       test:close()
    end
-
+   local n = 0
    for _,mpio in pairs{'INDEPENDENT', 'COLLECTIVE'} do
       for _,align in pairs{true, false} do
 	 for _,chunk in pairs{true, false} do
-	    runtest{filename=arg[2],
+	    n = n + 1
+	    runtest{filename=arg[2]..'/outfile'..n..'.h5',
 		    mpio=mpio,
 		    align=align,
 		    chunk=chunk}
