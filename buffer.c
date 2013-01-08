@@ -223,24 +223,23 @@ static int buffer_copy(lua_State *L)
  */
 {
   int d, M0=0, M1=0, ntot0=1, ntot1=1;
-  unsigned int rank0 = luaL_checkunsigned(L, 1);
+  char *buf0 = (char*) luaL_checkudata(L, 1, "buffer");
   int *exten0 = (int*) luaL_checkudata(L, 2, "buffer");
   int *start0 = (int*) luaL_checkudata(L, 3, "buffer");
   int *strid0 = (int*) luaL_checkudata(L, 4, "buffer");
   int *count0 = (int*) luaL_checkudata(L, 5, "buffer");
-  char *buf0 = (char*) luaL_checkudata(L, 6, "buffer");
+  char *buf1 = (char*) luaL_checkudata(L, 6, "buffer");
+  int *exten1 = (int*) luaL_checkudata(L, 7, "buffer");
+  int *start1 = (int*) luaL_checkudata(L, 8, "buffer");
+  int *strid1 = (int*) luaL_checkudata(L, 9, "buffer");
+  int *count1 = (int*) luaL_checkudata(L,10, "buffer");
+  unsigned int byte = luaL_checkunsigned(L, 11);
 
-  unsigned int rank1 = luaL_checkunsigned(L, 7);
-  int *exten1 = (int*) luaL_checkudata(L, 8, "buffer");
-  int *start1 = (int*) luaL_checkudata(L, 9, "buffer");
-  int *strid1 = (int*) luaL_checkudata(L,10, "buffer");
-  int *count1 = (int*) luaL_checkudata(L,11, "buffer");
-  char *buf1 = (char*) luaL_checkudata(L,12, "buffer");
-
-  unsigned int byte = luaL_checkunsigned(L, 13);
+  int rank0 = lua_rawlen(L, 2) / sizeof(int);
+  int rank1 = lua_rawlen(L, 7) / sizeof(int);
 
   for (d=0; d<rank0; ++d) {
-    ntot0 *= count1[d];
+    ntot0 *= count0[d];
   }
   for (d=0; d<rank1; ++d) {
     ntot1 *= count1[d];
@@ -249,23 +248,21 @@ static int buffer_copy(lua_State *L)
   if (ntot0 != ntot1) {
     luaL_error(L, "source and destination selections have different sizes");
   }
-  if (ntot0 > lua_rawlen(L, 6) / byte) {
+  if (ntot0 * byte > lua_rawlen(L, 1)) {
     luaL_error(L, "buffer: slice is to large for source buffer");
   }
-  if (ntot1 > lua_rawlen(L,12) / byte) {
+  if (ntot1 * byte > lua_rawlen(L, 6)) {
     luaL_error(L, "buffer: slice is to large for desination buffer");
   }
 
-  if (rank0 != lua_rawlen(L, 2) / sizeof(int) ||
-      rank0 != lua_rawlen(L, 3) / sizeof(int) ||
+  if (rank0 != lua_rawlen(L, 3) / sizeof(int) ||
       rank0 != lua_rawlen(L, 4) / sizeof(int) ||
       rank0 != lua_rawlen(L, 5) / sizeof(int)) {
     luaL_error(L, "buffer: slice description for source has wrong size");
   }
   if (rank1 != lua_rawlen(L, 8) / sizeof(int) ||
       rank1 != lua_rawlen(L, 9) / sizeof(int) ||
-      rank1 != lua_rawlen(L,10) / sizeof(int) ||
-      rank1 != lua_rawlen(L,11) / sizeof(int)) {
+      rank1 != lua_rawlen(L,10) / sizeof(int)) {
     luaL_error(L, "buffer: slice description for destination has wrong size");
   }
 
