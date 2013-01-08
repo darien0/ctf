@@ -141,7 +141,7 @@ static int buffer_isbuffer(lua_State *L)
 
 static int buffer_extract(lua_State *L)
 /* -----------------------------------------------------------------------------
- * Extracts a slice from B1, and returns it as the contiguous array 'B0'
+ * Extracts a slice from `buf`, and returns it as a contiguous buffer.
  * -----------------------------------------------------------------------------
  * 1. @buf    : [buffer] a buffer instance (source)
  * 2. @rank   : [unsigned int] dimensionality of buf
@@ -213,6 +213,131 @@ static int buffer_extract(lua_State *L)
   return 1;
 }
 
+static int buffer_copy(lua_State *L)
+/* -----------------------------------------------------------------------------
+ *
+ * Copy a `rank1` memory selection of `buf1` into a `rank0` memory selection of
+ * `buf0`.
+ *
+ * -----------------------------------------------------------------------------
+ */
+{
+  int d, M0=0, M1=0, ntot0=1, ntot1=1;
+  unsigned int rank0 = luaL_checkunsigned(L, 1);
+  int *exten0 = (int*) luaL_checkudata(L, 2, "buffer");
+  int *start0 = (int*) luaL_checkudata(L, 3, "buffer");
+  int *strid0 = (int*) luaL_checkudata(L, 4, "buffer");
+  int *count0 = (int*) luaL_checkudata(L, 5, "buffer");
+  char *buf0 = (char*) luaL_checkudata(L, 6, "buffer");
+
+  unsigned int rank1 = luaL_checkunsigned(L, 7);
+  int *exten1 = (int*) luaL_checkudata(L, 8, "buffer");
+  int *start1 = (int*) luaL_checkudata(L, 9, "buffer");
+  int *strid1 = (int*) luaL_checkudata(L,10, "buffer");
+  int *count1 = (int*) luaL_checkudata(L,11, "buffer");
+  char *buf1 = (char*) luaL_checkudata(L,12, "buffer");
+
+  unsigned int byte = luaL_checkunsigned(L, 13);
+
+  for (d=0; d<rank0; ++d) {
+    ntot0 *= count1[d];
+  }
+  for (d=0; d<rank1; ++d) {
+    ntot1 *= count1[d];
+  }
+
+  if (ntot0 != ntot1) {
+    luaL_error(L, "source and destination selections have different sizes");
+  }
+  if (ntot0 > lua_rawlen(L, 6) / byte) {
+    luaL_error(L, "buffer: slice is to large for source buffer");
+  }
+  if (ntot1 > lua_rawlen(L,12) / byte) {
+    luaL_error(L, "buffer: slice is to large for desination buffer");
+  }
+
+  if (rank0 != lua_rawlen(L, 2) / sizeof(int) ||
+      rank0 != lua_rawlen(L, 3) / sizeof(int) ||
+      rank0 != lua_rawlen(L, 4) / sizeof(int) ||
+      rank0 != lua_rawlen(L, 5) / sizeof(int)) {
+    luaL_error(L, "buffer: slice description for source has wrong size");
+  }
+  if (rank1 != lua_rawlen(L, 8) / sizeof(int) ||
+      rank1 != lua_rawlen(L, 9) / sizeof(int) ||
+      rank1 != lua_rawlen(L,10) / sizeof(int) ||
+      rank1 != lua_rawlen(L,11) / sizeof(int)) {
+    luaL_error(L, "buffer: slice description for destination has wrong size");
+  }
+
+  int *J0 = (int*) malloc(rank0 * sizeof(int)); // current indices into buffer
+  int *N0 = (int*) malloc(rank0 * sizeof(int)); // number of elements to select
+  int *S0 = (int*) malloc(rank0 * sizeof(int)); // skips along each axis
+
+  int *J1 = (int*) malloc(rank1 * sizeof(int));
+  int *N1 = (int*) malloc(rank1 * sizeof(int));
+  int *S1 = (int*) malloc(rank1 * sizeof(int));
+
+
+  for (d=0; d<rank0; ++d) {
+    J0[d] = 0;
+    N0[d] = count0[d];
+  }
+
+  for (d=0; d<rank1; ++d) {
+    J1[d] = 0;
+    N1[d] = count1[d];
+  }
+
+  S0[rank0-1] = 1;
+  S1[rank1-1] = 1;
+
+  for (d=rank0-2; d>=0; --d) {
+    S0[d] = S0[d+1] * exten0[d+1];
+  }
+  for (d=rank0-2; d>=0; --d) {
+    S1[d] = S1[d+1] * exten1[d+1];
+  }
+
+  while (J0[0] < N0[0]) {
+
+    M0 = 0;
+    M1 = 0;
+
+    for (d=0; d<rank0; ++d) {
+      M0 += (J0[d] * strid0[d] + start0[d]) * S0[d];
+    }
+    for (d=0; d<rank1; ++d) {
+      M1 += (J1[d] * strid1[d] + start1[d]) * S1[d];
+    }
+
+    memcpy(buf0 + M0*byte, buf1 + M1*byte, byte);
+
+    ++J0[rank0-1];
+    ++J1[rank1-1];
+
+    for (d=rank0-1; d!=0; --d) {
+      if (J0[d] == N0[d]) {
+	J0[d] = 0;
+	++J0[d-1];
+      }
+    }
+    for (d=rank1-1; d!=0; --d) {
+      if (J1[d] == N1[d]) {
+	J1[d] = 0;
+	++J1[d-1];
+      }
+    }
+  }
+
+  free(J0);
+  free(N0);
+  free(S0);
+  free(J1);
+  free(N1);
+  free(S1);
+  return 0;
+}
+
 
 static int buffer__index(lua_State *L)
 {
@@ -264,6 +389,7 @@ int luaopen_buffer(lua_State *L)
     {"get_typed", buffer_get_typed},
     {"set_typed", buffer_set_typed},
     {"extract", buffer_extract},
+    {"copy", buffer_copy},
     {"isbuffer", buffer_isbuffer},
     {NULL, NULL}};
 
