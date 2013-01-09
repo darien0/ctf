@@ -76,7 +76,7 @@ main.o : main.c
 	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I) -DINSTALL_DIR=\"$(PWD)\"
 
 main : main.o $(LUA_MPI) $(LUA_HDF5) $(LUA_BUFFER) $(LUA_COW) cow/libcow.a
-	$(CC) $(CFLAGS) -o $@ $^ $(LUA_I) $(LUA_L) $(HDF_L) $(FFT_L)
+	$(CC) $(CFLAGS) -o $@ $^ $(LUA_L) $(HDF_L) $(FFT_L)
 
 $(LUA_GLUT) :
 	$(MAKE) -C lua-glut DEFS=$(LUA_I)
