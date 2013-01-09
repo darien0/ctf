@@ -32,7 +32,7 @@ local rank = crank[0]
 
 local data = array.vector(nper, 'double')
 
-local file = hdf5.File('data/outfile.h5', 'w', fpl)
+local file = hdf5.File('outfile.h5', 'w', fpl)
 local grp = hdf5.Group(file, 'thegroup')
 local dset = hdf5.DataSet(grp, 'thedata', 'w',
 			  {shape={nper * size}, chunk={nper}, dtype='double'})
@@ -49,7 +49,7 @@ if rank == 0 then
 end
 file:close()
 
-local file = hdf5.File('data/outfile.h5', 'r', fpl)
+local file = hdf5.File('outfile.h5', 'r', fpl)
 local dset = file["thegroup"]["thedata"]
 local fspace = dset:get_space()
 local mspace = hdf5.DataSpace{nper}

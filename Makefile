@@ -39,7 +39,10 @@ HDF_L ?= -L$(HDF_HOME)/lib -lz -lhdf5
 FFT_I ?= -I$(FFT_HOME)/include
 FFT_L ?= -L$(FFT_HOME)/lib -lfftw3
 
-
+LUA_GLUT   = lua-glut
+LUA_MPI    = lua-mpi/lua-mpi.o
+LUA_HDF5   = lua-hdf5/lua-hdf5.o
+LUA_BUFFER = lua-buffer/lua-buffer.o
 
 default : main
 
@@ -52,22 +55,22 @@ $(LVER) :
 		$(MAKE) install INSTALL_TOP=$(PWD)/$(LVER)
 	$(RM) $(LVER).tar.gz
 
-lua-mpi/lua-mpi.o : .FORCE
+$(LUA_GLUT) :
+	$(MAKE) -C lua-glut DEFS=$(LUA_I)
+
+$(LUA_MPI) : .FORCE
 	$(MAKE) -C lua-mpi lua-mpi.o MAKEFILE_IN=$(MAKEFILE_IN)
 
-lua-hdf5/lua-hdf5.o : .FORCE
+$(LUA_HDF5) : .FORCE
 	$(MAKE) -C lua-hdf5 lua-hdf5.o MAKEFILE_IN=$(MAKEFILE_IN)
 
-buffer.o : buffer.c
-	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I)
-
-lua-glut :
-	$(MAKE) -C lua-glut DEFS=$(LUA_I)
+$(LUA_BUFFER) : .FORCE
+	$(MAKE) -C lua-buffer lua-buffer.o MAKEFILE_IN=$(MAKEFILE_IN)
 
 main.o : main.c
 	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I) -DINSTALL_DIR=\"$(PWD)\"
 
-main : main.o lua-mpi/lua-mpi.o lua-hdf5/lua-hdf5.o buffer.o
+main : main.o $(LUA_MPI) $(LUA_HDF5) $(LUA_BUFFER)
 	$(CC) $(CFLAGS) -o $@ $^ $(LUA_I) $(LUA_L) $(HDF_L)
 
 clean :
