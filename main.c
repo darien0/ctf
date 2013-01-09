@@ -13,7 +13,7 @@
 int luaopen_buffer(lua_State *L);
 int luaopen_hdf5(lua_State *L);
 int luaopen_mpi(lua_State *L);
-
+int luaopen_cow(lua_State *L);
 
 int main(int argc, char **argv)
 {
@@ -23,6 +23,7 @@ int main(int argc, char **argv)
   luaL_requiref(L, "buffer", luaopen_buffer, 0); lua_pop(L, 1);
   luaL_requiref(L, "HDF5", luaopen_hdf5, 0); lua_pop(L, 1);
   luaL_requiref(L, "MPI", luaopen_mpi, 0); lua_pop(L, 1);
+  luaL_requiref(L, "cow", luaopen_cow, 0); lua_pop(L, 1);
 
 
   // Create the global `arg` table
