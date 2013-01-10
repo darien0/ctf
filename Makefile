@@ -40,6 +40,7 @@ FFT_I ?= -I$(FFT_HOME)/include
 FFT_L ?= -L$(FFT_HOME)/lib -lfftw3
 
 LUA_COW    = cow/lua-cow.o
+LUA_MARA   = Mara/mara.o
 LUA_MPI    = lua-mpi/lua-mpi.o
 LUA_HDF5   = lua-hdf5/lua-hdf5.o
 LUA_BUFFER = lua-buffer/lua-buffer.o
@@ -60,8 +61,14 @@ $(LVER) :
 cow/libcow.a : .FORCE
 	$(MAKE) -C cow libcow.a MAKEFILE_IN=$(MAKEFILE_IN)
 
-cow/lua-cow.o : .FORCE
+$(LUA_COW) : .FORCE
 	$(MAKE) -C cow lua-cow.o MAKEFILE_IN=$(MAKEFILE_IN)
+
+Mara/libmara.a : .FORCE
+	$(MAKE) -C Mara libmara.a MAKEFILE_IN=$(MAKEFILE_IN)
+
+$(LUA_MARA) : .FORCE
+	$(MAKE) -C Mara mara.o MAKEFILE_IN=$(MAKEFILE_IN)
 
 $(LUA_MPI) : .FORCE
 	$(MAKE) -C lua-mpi lua-mpi.o MAKEFILE_IN=$(MAKEFILE_IN)
@@ -75,14 +82,17 @@ $(LUA_BUFFER) : .FORCE
 main.o : main.c
 	$(CC) $(CFLAGS) -c -o $@ $< $(LUA_I) -DINSTALL_DIR=\"$(PWD)\"
 
-main : main.o $(LUA_MPI) $(LUA_HDF5) $(LUA_BUFFER) $(LUA_COW) cow/libcow.a
-	$(CC) $(CFLAGS) -o $@ $^ $(LUA_L) $(HDF_L) $(FFT_L)
+main : main.o $(LUA_MPI) $(LUA_HDF5) $(LUA_BUFFER) \
+	$(LUA_COW) cow/libcow.a \
+	$(LUA_MARA) Mara/libmara.a
+	$(CXX) $(CFLAGS) -o $@ $^ $(LUA_L) $(HDF_L) $(FFT_L)
 
 $(LUA_GLUT) :
 	$(MAKE) -C lua-glut DEFS=$(LUA_I)
 
 clean :
 	$(MAKE) -C cow clean MAKEFILE_IN=$(MAKEFILE_IN)
+	$(MAKE) -C Mara clean MAKEFILE_IN=$(MAKEFILE_IN)
 	$(MAKE) -C lua-buffer clean MAKEFILE_IN=$(MAKEFILE_IN)
 	$(MAKE) -C lua-mpi clean MAKEFILE_IN=$(MAKEFILE_IN)
 	$(MAKE) -C lua-hdf5 clean MAKEFILE_IN=$(MAKEFILE_IN)
