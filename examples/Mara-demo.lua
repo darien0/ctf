@@ -1,18 +1,27 @@
 
-local array  = require 'array'
-local cow    = require 'cow'
-local Mara   = require 'Mara'
-local MPI    = require 'MPI'
+local array   = require 'array'
+local MPI     = require 'MPI'
+local cow     = require 'cow'
+local Mara    = require 'Mara'
+local LuaMara = require 'LuaMara'
 
 MPI.Init()
 cow.init(0, nil, 0) -- to reopen stdout to dev/null
 
+Mara.start()
+Mara.set_fluid('euler')
+Mara.set_advance('single')
+Mara.set_godunov('plm-muscl')
+Mara.set_boundary('periodic')
+Mara.set_riemann('hllc')
+
 -- Global zones
+local prim_names = Mara.fluid.GetPrimNames()
 local Nx = 16
 local Ny = 16
-local Nz = 16
+local Nz = 64
 local Ng = 3
-local Nq = 5
+local Nq = #prim_names
 
 local domain = cow.domain_new()
 local domain_comm = MPI.Comm()
@@ -32,19 +41,13 @@ local nz = cow.domain_getnumlocalzonesincguard(domain, 2)
 local function pinit(x,y,z)
    return {1,1,0,0,0}
 end
-local P = array.array{nx,ny,nz,Nq}
 
-Mara.start()
+local data_man = LuaMara.MaraDataManager(domain, prim_names)
+local P = data_man.array
 Mara.set_domain({0,0,0}, {1,1,1}, {Nx, Ny, Nz}, Nq, Ng, domain_comm)
 Mara.init_prim(P:buffer(), pinit)
-Mara.set_fluid('euler')
-Mara.set_advance('single')
-Mara.set_godunov('plm-muscl')
-Mara.set_boundary('periodic')
-Mara.set_riemann('hllc')
-
 Mara.units.Print()
-print(Mara.fluid.GetPrimNames())
+data_man:write('chkpt.0001.h5', {file_mode='r+', dset_mode='w'})
 
 local time, error = Mara.advance(P:buffer(), 0.1)
 

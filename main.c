@@ -51,7 +51,9 @@ int main(int argc, char **argv)
 		  "%s/lua-hdf5/?.lua;"
 		  "%s/lua-mpi/?.lua;"
 		  "%s/lua-glut/?.lua;"
-		  "%s/lua-buffer/?.lua;",
+		  "%s/lua-buffer/?.lua;"
+		  "%s/Mara/?.lua;",
+		  INSTALL_DIR,
 		  INSTALL_DIR,
 		  INSTALL_DIR,
 		  INSTALL_DIR,
