@@ -44,6 +44,7 @@ Mara.set_boundary('periodic')
 Mara.set_riemann('hllc')
 
 Mara.units.Print()
+print(Mara.fluid.GetPrimNames())
 
 local time, error = Mara.advance(P:buffer(), 0.1)
 
