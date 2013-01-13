@@ -42,7 +42,6 @@ function vector:__tostring(i,x)
    return '['..table.concat(tab, ', ')..']'
 end
 
-
 function array.vector(arg, dtype)
    local dtype = dtype or 'double'
    local new = {_dtype=dtype, _printn=5}
@@ -245,7 +244,9 @@ function array.array(extent, dtype)
    return array.view(buf, dtype, extent)
 end
 
-
+--------------------------------------------------------------------------------
+-- Module test suite
+--------------------------------------------------------------------------------
 local function test1()
    local vec = array.vector{0.0, 1.0, 2.0}
    assert(#vec == 3)
@@ -284,6 +285,18 @@ local function test3()
    assert(not view1:contiguous())
    assert(not view2:contiguous())
 end
+local function test4()
+   local A0 = array.array{10,10,10}
+   local A1 = array.array{10,10,10}
+   local V0 = A0:vector()
+   local V1 = A1:vector()
+   A0[{{2,8},{2,8},{2,8}}] = A1[{{2,8},{2,8},{2,8}}]
+   for i=0,#V0-1 do
+      if V0[i] ~= 0 then
+	 assert(V0[i] == V1[i])
+      end
+   end
+end
 
 
 --------------------------------------------------------------------------------
@@ -295,5 +308,6 @@ else
    test1()
    test2()
    test3()
+   test4()
    print(debug.getinfo(1).source, ": All tests passed")
 end
