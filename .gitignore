@@ -9,3 +9,5 @@
 /cow/*.o
 /cow/*.a
 /cow/cowfuncs.c
+/Mara/*.o
+/Mara/*.a

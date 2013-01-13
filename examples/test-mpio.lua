@@ -22,14 +22,6 @@ local dataset_names = {"dset1", "dset2", "dset3", "dset4", "dset5"}
 local sep1 = "#################################################################"
 local sep2 = "-----------------------------------------------------------------"
 
-function array.array(extent, dtype)
-   local dtype = dtype or 'double'
-   local N = 1
-   for i,n in ipairs(extent) do N = N * n end
-   local buf = buffer.new_buffer(N * buffer.sizeof(buffer[dtype]))
-   return array.view(buf, dtype, extent)
-end
-
 local function comm_rank_size(comm)
    local crank = buffer.new_buffer(buffer.sizeof(buffer.int))
    local csize = buffer.new_buffer(buffer.sizeof(buffer.int))
