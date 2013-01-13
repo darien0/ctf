@@ -10,3 +10,6 @@
 [submodule "cow"]
 	path = cow
 	url = git://github.com/jzrake/cow
+[submodule "Mara"]
+	path = Mara
+	url = git://github.com/jzrake/Mara
