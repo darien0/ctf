@@ -7,3 +7,6 @@
 [submodule "lua-glut"]
 	path = lua-glut
 	url = git://github.com/jzrake/lua-glut.git
+[submodule "cow"]
+	path = cow
+	url = git://github.com/jzrake/cow
