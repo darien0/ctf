@@ -11,3 +11,4 @@
 /cow/cowfuncs.c
 /Mara/*.o
 /Mara/*.a
+/lua-buffer/lua-buffer.o
