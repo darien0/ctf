@@ -16,7 +16,7 @@ Mara.set_godunov('plm-muscl')
 Mara.set_boundary('periodic')
 Mara.set_riemann('hllc')
 
--- Global zones
+-- Global variables
 local prim_names = Mara.fluid.GetPrimNames()
 local Nx = 32
 local Ny = 32
