@@ -222,9 +222,9 @@ local function LoadMicroPh(fname)
    -- Load EOS data from the file
    local D = eos_file["density"    ][{{nil},{0,1}}]:table()
    local T = eos_file["temperature"][{{0,1},{nil}}]:table()
-   local p = eos_file["pressure"][nil]:table()
+   local p = eos_file["pressure"       ][nil]:table()
    local u = eos_file["internal_energy"][nil]:table()
-   local c = eos_file["sound_speed"][nil]:table()
+   local c = eos_file["sound_speed"    ][nil]:table()
 
    -- Convert EOS from physics to code units (EOS is stored in NS units)
    for i=1,#D do D[i] = D[i] * Mara.units.GramsPerCubicCentimeter() end
