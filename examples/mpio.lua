@@ -1,11 +1,10 @@
 
 -- http://www.hdfgroup.org/HDF5/doc/RM/CollectiveCalls.html
 
-local MPI = require 'MPI'
-local H5 = require 'HDF5'
-local hdf5 = require 'LuaHDF5'
 local array = require 'array'
-
+local MPI   = require 'MPI'
+local H5    = require 'HDF5'
+local hdf5  = require 'lua-hdf5.LuaHDF5'
 
 MPI.Init()
 

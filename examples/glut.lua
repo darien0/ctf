@@ -1,13 +1,11 @@
 -- vim: set ts=3 et:
 
-print('_VERSION = ' .. _VERSION)
-
-local buffer = require 'buffer'
---local hdf5 = require 'LuaHDF5'
-
+package.cpath = 'lua-glut/?.so;'..package.cpath
 require 'luagl'
 require 'luaglut'
+local buffer = require 'buffer'
 
+print('Lua _VERSION = ' .. _VERSION)
 print('luagl.VERSION = '   .. luagl.VERSION)
 print('luaglut.VERSION = ' .. luaglut.VERSION)
 

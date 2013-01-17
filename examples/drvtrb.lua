@@ -1,11 +1,11 @@
 
-local array   = require 'array'
 local MPI     = require 'MPI'
-local json    = require 'json'
 local cow     = require 'cow'
-local hdf5    = require 'LuaHDF5'
-local LuaMara = require 'LuaMara'
+local hdf5    = require 'lua-hdf5.LuaHDF5'
 local Mara    = require 'Mara'
+local LuaMara = require 'Mara.LuaMara'
+local array   = require 'array'
+local json    = require 'json'
 
 local RunArgs = {
    N       = 16,
@@ -502,9 +502,6 @@ local function main()
    end
 
    local pvec = primitive.array[{{},{},{},{0,1}}]:vector()
-   pvec:set_printn(1000)
-   print(pvec)
-
    local datadir = string.format("data/%s", RunArgs.id)
    if cow.domain_getcartrank(domain) == 0 then
       os.execute(string.format("mkdir -p %s", datadir))

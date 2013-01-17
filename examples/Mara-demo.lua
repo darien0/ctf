@@ -3,8 +3,8 @@ local array   = require 'array'
 local MPI     = require 'MPI'
 local cow     = require 'cow'
 local Mara    = require 'Mara'
-local LuaMara = require 'LuaMara'
-local hdf5    = require 'LuaHDF5'
+local LuaMara = require 'Mara.LuaMara'
+local hdf5    = require 'lua-hdf5.LuaHDF5'
 
 MPI.Init()
 cow.init(0, nil, 0) -- to reopen stdout to dev/null

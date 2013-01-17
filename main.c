@@ -1,5 +1,3 @@
-
-
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -10,11 +8,13 @@
 #endif // INSTALL_DIR
 
 
+static int traceback(lua_State *L);
 int luaopen_buffer(lua_State *L);
 int luaopen_hdf5(lua_State *L);
 int luaopen_mpi(lua_State *L);
 int luaopen_cow(lua_State *L);
 int luaopen_Mara(lua_State *L);
+
 
 int main(int argc, char **argv)
 {
@@ -41,22 +41,7 @@ int main(int argc, char **argv)
   // Set the Lua path
   // ---------------------------------------------------------------------------
   lua_getglobal(L, "package");
-  lua_pushfstring(L, "%s/lua-glut/?.bundle", INSTALL_DIR);
-  lua_setfield(L, -2, "cpath");
-  lua_pop(L, 1);
-
-  lua_getglobal(L, "package");
-  lua_pushfstring(L,
-  		  "%s/modules/?.lua;"
-		  "%s/lua-hdf5/?.lua;"
-		  "%s/lua-mpi/?.lua;"
-		  "%s/lua-glut/?.lua;"
-		  "%s/lua-buffer/?.lua;"
-		  "%s/Mara/?.lua;",
-		  INSTALL_DIR,
-		  INSTALL_DIR,
-		  INSTALL_DIR,
-		  INSTALL_DIR,
+  lua_pushfstring(L,"%s/?.lua;%s/modules/?.lua;",
 		  INSTALL_DIR,
 		  INSTALL_DIR);
   lua_setfield(L, -2, "path");
@@ -65,26 +50,35 @@ int main(int argc, char **argv)
 
   // Run the script
   // ---------------------------------------------------------------------------
+  lua_pushcfunction(L, traceback);
   if (argc == 1) {
     printf("usage: main script.lua [arg1=val1 arg2=val2]\n");
   }
   else {
-    char luacode[4096];
-    snprintf(luacode, 4096, "\
-    local f, err = loadfile('%s')\n					\
-    if not f then\n							\
-      print(err)\n							\
-    else								\
-      local success, msg = xpcall(f, debug.traceback)\n			\
-      if not success then\n						\
-         print(msg)\n							\
-      end\n								\
-    end\n", argv[1]);
-    int err = luaL_dostring(L, luacode);
-    if (err) {
+    if (luaL_loadfile(L, argv[1])) {
       printf("%s\n", lua_tostring(L, -1));
+    }
+    else {
+      if (lua_pcall(L, 0, 0, -2)) {
+	printf("%s\n", lua_tostring(L, -1));
+      }
     }
   }
   lua_close(L);
   return 0;
+}
+
+
+int traceback(lua_State *L)
+{
+  const char *msg = lua_tostring(L, 1);
+  if (msg) {
+    luaL_traceback(L, L, msg, 1);
+  }
+  else if (!lua_isnoneornil(L, 1)) {
+    if (!luaL_callmeta(L, 1, "__tostring")) {
+      lua_pushliteral(L, "(no error message)");
+    }
+  }
+  return 1;
 }
