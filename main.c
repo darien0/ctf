@@ -15,6 +15,18 @@ int luaopen_mpi(lua_State *L);
 int luaopen_cow(lua_State *L);
 int luaopen_Mara(lua_State *L);
 
+#ifndef USE_MPI
+int luaopen_mpi(lua_State *L){lua_newtable(L);return 1;}
+#endif
+#ifndef USE_HDF5
+int luaopen_hdf5(lua_State *L){lua_newtable(L);return 1;}
+#endif
+#ifndef USE_MARA
+int luaopen_Mara(lua_State *L){lua_newtable(L);return 1;}
+#endif
+#ifndef USE_COW
+int luaopen_cow(lua_State *L){lua_newtable(L);return 1;}
+#endif
 
 int main(int argc, char **argv)
 {
